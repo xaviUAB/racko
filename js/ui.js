@@ -149,3 +149,24 @@ function renderLobbyContent(game, userId) {
     `;
 }
 
+function updateGameStatus(game, userId) {
+    let statusText, statusColor;
+    const isFinishedGame = game.status === 'finished';
+    const isFinishedHand = game.status === 'finishedhand';
+    const isMyTurn = game.turn === userId;
+    if (isFinishedGame) {
+        const finalWinner = game.players.find(p => p.id === game.winnerId);
+        statusText = `JOC FINALITZAT! Guanyador: ${finalWinner?.name || 'Desconegut'} amb ${finalWinner?.score} punts.`;
+        statusColor = 'bg-yellow-500 text-gray-900';
+    } else if (isFinishedHand) {
+        const winnerName = game.players.find(p => p.id === game.winnerId)?.name || 'Algú';
+        statusText = `MÀ GUANYADA! ${winnerName} ha fet Rack-O!`;
+        statusColor = 'bg-green-500 text-white';
+    } else {
+        const turnPlayer = game.players.find(p => p.id === game.turn);
+        statusText = `Torn de ${turnPlayer?.name || 'Desconegut'}`;
+        statusColor = isMyTurn ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
+    }
+    document.getElementById('game-status').innerHTML = 
+        `<span class="px-4 py-2 rounded-full font-bold ${statusColor} text-sm">${statusText}</span>`;
+}
