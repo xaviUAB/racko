@@ -95,6 +95,12 @@
             font-size: 1.5rem;
             line-height: 1;
         }
+
+        /* Debug panel styles */
+        .debug-panel {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-6">
@@ -128,19 +134,40 @@
         </header>
 
         <!-- Debug panel -->
-        <div id="debug-and-host-tools" class="text-xs p-2 mb-4 bg-yellow-50 rounded-lg border border-yellow-200 flex flex-col sm:flex-row justify-between items-center">
-            <div class="mb-2 sm:mb-0">
-                <h4 class="font-bold text-yellow-800 mb-1">Diagnòstic Debug</h4>
-                <span id="user-id-display" class="block text-gray-700">ID d'Usuari: <span class="font-mono text-xs">Carregant...</span></span>
-                <span id="game-id-display" class="block text-gray-700">ID de Partida Activa: <span id="game-id-value" class="font-bold text-red-600">N/A</span></span>
+        <div id="debug-and-host-tools" class="debug-panel text-xs p-3 mb-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start">
+                <div class="mb-2 sm:mb-0">
+                    <h4 class="font-bold text-yellow-800 mb-1">🔧 Diagnòstic Debug</h4>
+                    <div id="user-id-display" class="text-gray-700 mb-1">
+                        ID d'Usuari: <span class="font-mono text-xs">Carregant...</span>
+                    </div>
+                    <div id="game-id-display" class="text-gray-700 mb-1">
+                        ID de Partida: <span id="game-id-value" class="font-bold text-red-600">N/A</span>
+                    </div>
+                    <div class="text-gray-600 text-xs">
+                        Consola del navegador: F12 per veure logs detallats
+                    </div>
+                </div>
+                <div id="host-reset-area" class="mt-2 sm:mt-0">
+                    <button onclick="window.debugRacko?.showConfig?.()" 
+                            class="px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-xs">
+                        Mostrar Config
+                    </button>
+                </div>
             </div>
-            <div id="host-reset-area" class="mt-2 sm:mt-0 w-full sm:w-auto"></div>
         </div>
 
         <!-- Main container -->
         <div id="main-container">
             <div id="game-container" class="mt-4">
-                <p class="text-center text-gray-600">Carregant l'estat de la partida...</p>
+                <div class="text-center p-8 bg-blue-50 rounded-xl">
+                    <div class="flex items-center justify-center mb-4">
+                        <i data-lucide="loader-2" class="w-8 h-8 text-blue-600 animate-spin mr-3"></i>
+                        <h2 class="text-xl font-bold text-blue-700">Inicialitzant aplicació...</h2>
+                    </div>
+                    <p class="text-gray-600">Configurant Firebase i autenticació d'usuari.</p>
+                    <p class="text-sm text-gray-500 mt-2">Si això dura més d'uns segons, comprova la consola (F12).</p>
+                </div>
             </div>
 
             <!-- Active game area -->
@@ -189,14 +216,54 @@
                 <button id="modal-confirm-btn" class="hidden w-full py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-200">
                     Confirmar
                 </button>
-                <button id="modal-close-btn" onclick="window.gameFunctions.closeModal()" class="w-full py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-200">
+                <button id="modal-close-btn" onclick="window.gameFunctions?.closeModal?.()" class="w-full py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-200">
                     Entès
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ES6 Modules -->
-    <script type="module" src="js/app.js"></script>
+    <!-- ES6 Module Entry Point - UPDATED IMPORT PATH -->
+    <script type="module">
+        // Import the fixed app.js
+        import('./js/app.js').then(module => {
+            console.log('✅ App module loaded successfully');
+        }).catch(error => {
+            console.error('❌ Error loading app module:', error);
+            document.getElementById('main-container').innerHTML = `
+                <div class="text-center p-8 bg-red-100 rounded-xl">
+                    <h2 class="text-xl font-bold text-red-600 mb-4">Error carregant l'aplicació</h2>
+                    <p class="text-red-700 mb-4">No s'ha pogut carregar el mòdul principal.</p>
+                    <p class="text-sm text-gray-600 mb-4">Error: ${error.message}</p>
+                    <button onclick="location.reload()" 
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Recarregar
+                    </button>
+                </div>
+            `;
+        });
+    </script>
+    
+    <script>
+        // Initialize Lucide icons immediately
+        lucide.createIcons();
+        
+        // Global error handler for module loading
+        window.addEventListener('error', (e) => {
+            if (e.filename && e.filename.includes('.js')) {
+                console.error('Module loading error:', e);
+                const container = document.getElementById('main-container');
+                if (container && !container.innerHTML.includes('Error carregant')) {
+                    container.innerHTML = `
+                        <div class="text-center p-8 bg-red-100 rounded-xl">
+                            <h2 class="text-xl font-bold text-red-600 mb-4">Error de mòdul</h2>
+                            <p class="text-sm text-gray-600">${e.message}</p>
+                            <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded">Recarregar</button>
+                        </div>
+                    `;
+                }
+            }
+        });
+    </script>
 </body>
 </html>
