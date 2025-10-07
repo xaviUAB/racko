@@ -127,9 +127,58 @@ const joinGame = async (gameIdToJoin, rawPlayerName) => {
 };
 
 const startGame = async () => {
-    // Aquí implementa la lògica per començar partida (només des del creador i si lobby està complet)
-    showModal('Inici de partida', 'Falta implementar!');
+    // Només el creador i si el lobby està complet poden iniciar la partida
+    if (!gameState || gameState.status !== 'lobby') {
+        showModal('Error', 'La partida ja ha començat o ja no està en estat de lobby.');
+        return;
+    }
+    if (!gameState.players || gameState.players.length !== gameState.numPlayers) {
+        showModal('Error', 'Encara falten jugadors per unir-se.');
+        return;
+    }
+    // Només el primer jugador (creador) pot iniciar
+    if (gameState.players[0].id !== userId) {
+        showModal('Només el creador pot iniciar!', 'El teu compte no pot iniciar la partida.');
+        return;
+    }
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameRef = getGameRef(gameId);
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) throw new Error('La partida ha estat eliminada.');
+            const game = gameDoc.data();
+            if (game.status !== 'lobby') throw new Error('La partida ja ha començat.');
+
+            // Barat fem una còpia del deck
+            const deck = [...game.deck];
+            // Reparteix cartes a cada jugador
+            const updatedPlayers = game.players.map(player => {
+                const rack = [];
+                for (let i = 0; i < NUM_CARDS_IN_RACK; i++) {
+                    rack.push(deck.pop());
+                }
+                return { ...player, rack };
+            });
+            // Primer jugador comença el torn  
+            const turn = game.playerIds[0];
+            // Una carta al discard pile, la resta és deck
+            const discard = [deck.pop()];
+
+            transaction.update(gameRef, {
+                status: 'playing',
+                players: updatedPlayers,
+                deck: deck,
+                discardPile: discard,
+                turn: turn,
+                lastUpdate: Date.now(),
+                messages: arrayUnion('La partida ha començat!')
+            });
+        });
+    } catch (error) {
+        showModal('Error', 'No s\'ha pogut iniciar la partida: ' + error.message);
+    }
 };
+
 
 const startListeningToGame = (id) => {
     if (unsubscribeGame) unsubscribeGame();
