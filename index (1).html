@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rack-O Game Multijugador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f3e8;
+        }
+        
+        /* Accessible color contrasts (WCAG AA compliance) */
+        .card-slot {
+            width: 100%;
+            height: 60px;
+            background-color: #f3f4f6;
+            border: 2px dashed #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .card-value {
+            width: 90%;
+            height: 90%;
+            background-color: #ffffff;
+            border: 3px solid #1f2937;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        
+        .card-back {
+            background-color: #4f46e5;
+            border: 3px solid #fcd34d;
+            color: white;
+        }
+        
+        .card-slot:hover:not(.has-card), .not-playable {
+            background-color: #fca5a5;
+            border-color: #ef4444;
+        }
+        
+        .can-replace {
+            box-shadow: 0 0 0 4px #10b981;
+        }
+        
+        .can-replace:hover {
+            transform: scale(1.02);
+        }
+        
+        .current-player {
+            box-shadow: 0 0 0 3px #f59e0b;
+        }
+        
+        /* High contrast mode toggle */
+        .high-contrast {
+            --bg-primary: #000000;
+            --text-primary: #ffffff;
+            --border-primary: #ffff00;
+        }
+        
+        .floating-card {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            width: 50px;
+            height: 70px;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+        
+        .floating-card.active {
+            opacity: 1;
+        }
+        
+        .floating-card .card-value {
+            width: 100%;
+            height: 100%;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6">
+    <!-- Floating card cursor -->
+    <div id="floating-card" class="floating-card">
+        <div class="card-value shadow-2xl"></div>
+    </div>
+
+    <!-- Main UI -->
+    <div class="max-w-4xl mx-auto p-4 bg-white rounded-xl shadow-2xl">
+        <!-- Header -->
+        <header class="mb-4 flex flex-col sm:flex-row justify-between items-center pb-4 border-b">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-2 sm:mb-0">
+                Rack-O <span class="text-indigo-600 text-base">v. Multijugador</span>
+            </h1>
+            
+            <!-- Accessibility Controls -->
+            <div class="flex items-center space-x-4">
+                <button id="toggle-contrast" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold transition duration-200">
+                    Alt contrast
+                </button>
+                <button id="toggle-sound" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold transition duration-200">
+                    🔊 So
+                </button>
+                <button id="toggle-vibration" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold transition duration-200">
+                    📳 Vibració
+                </button>
+            </div>
+            
+            <div id="game-status" class="text-sm font-semibold">Carregant...</div>
+        </header>
+
+        <!-- Debug panel -->
+        <div id="debug-and-host-tools" class="text-xs p-2 mb-4 bg-yellow-50 rounded-lg border border-yellow-200 flex flex-col sm:flex-row justify-between items-center">
+            <div class="mb-2 sm:mb-0">
+                <h4 class="font-bold text-yellow-800 mb-1">Diagnòstic Debug</h4>
+                <span id="user-id-display" class="block text-gray-700">ID d'Usuari: <span class="font-mono text-xs">Carregant...</span></span>
+                <span id="game-id-display" class="block text-gray-700">ID de Partida Activa: <span id="game-id-value" class="font-bold text-red-600">N/A</span></span>
+            </div>
+            <div id="host-reset-area" class="mt-2 sm:mt-0 w-full sm:w-auto"></div>
+        </div>
+
+        <!-- Main container -->
+        <div id="main-container">
+            <div id="game-container" class="mt-4">
+                <p class="text-center text-gray-600">Carregant l'estat de la partida...</p>
+            </div>
+
+            <!-- Active game area -->
+            <div id="game-active-area" class="mt-6 hidden">
+                <!-- Draw pile and discard -->
+                <div class="flex justify-center space-x-8 mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+                    <div class="flex flex-col items-center">
+                        <h4 class="font-bold text-gray-800 mb-2 flex items-center">
+                            <i data-lucide="layers" class="w-4 h-4 mr-1"></i>
+                            Munt (<span id="draw-pile-count">0</span>)
+                        </h4>
+                        <div id="draw-pile" class="w-20 h-32 border-4 border-gray-400 rounded-lg cursor-pointer transition duration-200"></div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <h4 class="font-bold text-gray-800 mb-2 flex items-center">
+                            <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i>
+                            Descarts
+                        </h4>
+                        <div id="discard-pile" class="w-20 h-32 border-4 border-gray-400 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- Action area -->
+                <div id="action-area" class="mb-6 p-3 rounded-xl text-center"></div>
+
+                <!-- My rack -->
+                <div class="bg-indigo-50 p-4 rounded-xl shadow-inner mb-6">
+                    <h3 class="text-xl font-bold text-indigo-700 mb-3">El Teu Atril (Rack)</h3>
+                    <div id="my-rack" class="grid grid-flow-col grid-rows-5 grid-cols-2 sm:grid-flow-row sm:grid-cols-5 gap-3"></div>
+                </div>
+
+                <!-- Player scores -->
+                <h3 class="text-xl font-bold text-gray-800 mb-3">Puntuació Global</h3>
+                <div id="all-players-score" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h4 id="modal-title" class="text-2xl font-bold mb-3 text-red-600">Títol del Modal</h4>
+            <p id="modal-message" class="text-gray-700 mb-4">Missatge del modal.</p>
+            <div id="modal-actions" class="flex flex-col space-y-2">
+                <button id="modal-confirm-btn" class="hidden w-full py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-200">
+                    Confirmar
+                </button>
+                <button id="modal-close-btn" onclick="window.gameFunctions.closeModal()" class="w-full py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-200">
+                    Entès
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ES6 Modules -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
