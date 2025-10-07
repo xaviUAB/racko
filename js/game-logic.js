@@ -1,4 +1,3 @@
-// js/game-logic.js - Game state management and Firebase operations
 import {
     doc, getDoc, setDoc, onSnapshot, collection, query,
     updateDoc, arrayUnion, runTransaction, getDocs, where, deleteDoc
@@ -16,7 +15,7 @@ export const initGameLogic = (database, applicationId, userIdentifier) => {
     appId = applicationId;
     userId = userIdentifier;
     document.getElementById('user-id-display').textContent = `ID: ${userId}`;
-    window.gameFunctions.renderLobby('Crea o uneix-te a una partida');
+    // No cridem renderLobby aquí, això ja es fa des d'app.js DESPRÉS de setup complet!
 };
 
 const getGameRef = (id) => doc(db, 'artifacts', appId, 'public', 'data', 'rackogames', id);
@@ -50,7 +49,6 @@ const createGame = async (numPlayers, rawPlayerName) => {
         return;
     }
     gameId = uniqueId;
-    // IMPORTANT: inclou el camp gameId explícit!
     const newGameData = {
         gameId: uniqueId,
         status: 'lobby',
@@ -75,13 +73,76 @@ const createGame = async (numPlayers, rawPlayerName) => {
     startListeningToGame(uniqueId);
 };
 
+const joinGame = async (gameIdToJoin, rawPlayerName) => {
+    await unlockAudio();
+    const playerName = validatePlayerName(rawPlayerName);
+    const trimmedId = (gameIdToJoin || '').trim();
+    if (!playerName) return;
+    if (!trimmedId || trimmedId.length !== 4 || isNaN(trimmedId)) {
+        showModal('Error', 'Codi de partida invàlid.');
+        return;
+    }
+    try {
+        const gameRef = getGameRef(trimmedId);
+        await runTransaction(db, async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) {
+                throw new Error('La partida no existeix');
+            }
+            const game = gameDoc.data();
+            if (game.playerIds && game.playerIds.includes(userId)) {
+                // Ja ets dins, només escoltem!
+                return;
+            }
+            if (game.status !== 'lobby') {
+                throw new Error('La partida ja ha començat');
+            }
+            if (!game.playerIds || game.playerIds.length >= game.numPlayers) {
+                throw new Error('La partida està plena');
+            }
+            // Comprova noms duplicats
+            if (game.players && game.players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
+                throw new Error('Aquest nom ja està en ús');
+            }
+            const newPlayer = {
+                id: userId,
+                name: playerName,
+                rack: Array(NUM_CARDS_IN_RACK).fill(null),
+                score: 0,
+                scoreHistory: []
+            };
+            const updatedPlayers = [...(game.players || []), newPlayer];
+            const updatedMessages = [...(game.messages || []), `${newPlayer.name} s'ha unit.`];
+            transaction.update(gameRef, {
+                playerIds: arrayUnion(userId),
+                players: updatedPlayers,
+                messages: updatedMessages,
+                lastUpdate: Date.now()
+            });
+        });
+        startListeningToGame(trimmedId);
+    } catch (error) {
+        showModal('Error d\'Unió', error.message);
+    }
+};
+
+const startGame = async () => {
+    // Aquí implementa la lògica per començar partida (només des del creador i si lobby està complet)
+    showModal('Inici de partida', 'Falta implementar!');
+};
+
 const startListeningToGame = (id) => {
     if (unsubscribeGame) unsubscribeGame();
     gameId = id;
     unsubscribeGame = onSnapshot(getGameRef(gameId), (doc) => {
         if (doc.exists()) {
             gameState = doc.data();
-            window.gameFunctions.renderGame(gameState, userId, gameState.turn === userId, () => gameState.players.find(p => p.id === userId), () => null);
+            if (typeof window.gameFunctions?.renderGame === 'function') {
+                window.gameFunctions.renderGame(
+                    gameState, userId, gameState.turn === userId,
+                    () => gameState.players.find(p => p.id === userId), () => null
+                );
+            }
             document.getElementById('game-id-value').textContent = gameId; // DEBUG panel
         } else {
             resetLobbyState('Partida eliminada del servidor.');
@@ -96,16 +157,21 @@ const resetLobbyState = (msg = '') => {
     gameId = null; gameState = null;
     clearFloatingCard();
     document.getElementById('game-id-value').textContent = 'N/A';
-    window.gameFunctions.renderLobby(msg || 'Crea o uneix-te a una partida');
+    if (typeof window.gameFunctions?.renderLobby === 'function') {
+        window.gameFunctions.renderLobby(msg || 'Crea o uneix-te a una partida');
+    }
 };
 
 export const gameFunctions = {
-    createGame, resetLobbyState,
-    // Implementa joinGame, startGame, etc. com sempre...
-    renderLobby: () => {}, renderGame: () => {}
+    createGame,
+    joinGame,
+    startGame,
+    resetLobbyState,
+    // Altres funcions si cal
+    renderLobby: () => {},
+    renderGame: () => {}
 };
 
-// Modal helper
 const showModal = (title, msg) => {
-    alert(`${title}: ${msg}`); // Fes que apunti als teus modals!
+    alert(`${title}: ${msg}`);
 };
