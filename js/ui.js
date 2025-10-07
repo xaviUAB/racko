@@ -37,9 +37,18 @@ export const clearFloatingCard = () => {
     updateFloatingCard(null, null);
 };
 
-export const renderLobby = (message = 'L\'estat de connexió s\'ha netejat. Torna a unir-te o crea una nova partida.') => {
-    clearFloatingCard();
-    
+
+export const renderLobby = (message = '') => {
+    // Usa gameId a nivell global o game.gameId si disponible.
+    const codi = window.gameFunctions?.gameId || 'N/A';
+    document.getElementById('game-container').innerHTML = `
+        <div>Codi de Partida (4 Dígits per Compartir): <span>${codi}</span></div>
+        ${message ? `<div>${message}</div>` : ''}
+        <!-- Inputs i botons here -->
+    `;
+    document.getElementById('game-id-value').textContent = codi; // DEBUG panel
+};
+   
     const savedName = localStorage.getItem('racko-player-name') || '';
     
     document.getElementById('game-status').innerHTML = '<span class="text-xl font-bold text-gray-800">Sala d\'Espera</span>';
