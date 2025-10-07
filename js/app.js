@@ -1,65 +1,10 @@
-// js/app.js - Main application entry point (versió robusta)
+// js/app.js - Main application entry point revisat
 import { initFirebase, authenticateUser } from './firebase.js';
 import { initAudio, toggleSound, toggleVibration, getSoundState, getVibrationState } from './sound.js';
 import { initUI, renderLobby, renderGame } from './ui.js';
 import { gameFunctions, initGameLogic } from './game-logic.js';
 
 let firebaseComponents = null;
-
-const init = async () => {
-    try {
-        // Inicialitza Firebase
-        firebaseComponents = await initFirebase();
-        if (!firebaseComponents) throw new Error('No s\'ha pogut inicialitzar Firebase.');
-
-        const { app, db, auth } = firebaseComponents;
-
-        // Autentica l'usuari
-        const userId = await authenticateUser(auth);
-        if (!userId) throw new Error('No s\'ha pogut autenticar l\'usuari.');
-
-        // Inicialitza UI i audio
-        initAudio();
-        initUI();
-
-        // Defineix l'objecte global de funcions, incloent UI
-        window.gameFunctions = {
-            ...gameFunctions,
-            renderLobby,
-            renderGame,
-        };
-
-        // Mostra el lobby inicial
-        renderLobby('Benvingut! Crea o uneix-te a una partida.');
-
-        // Inicialitza la lògica del joc
-        initGameLogic(db, app.options.projectId, userId);
-
-        // Controls d'accessibilitat
-        setupAccessibilityControls();
-
-        // Helpers de debug (opcionales)
-        window.debugRacko = {
-            getUserId: () => userId,
-            getFirebaseApp: () => app,
-            showConfig: () => {
-                console.log('Config:', app.options);
-                console.log('UserId:', userId);
-            }
-        };
-    } catch (error) {
-        // Mostra error bonic
-        document.getElementById('main-container').innerHTML = `
-            <div class="p-8 bg-red-100 rounded-xl text-center">
-                <h2 class="text-xl font-bold text-red-600 mb-4">Error d'Inicialització</h2>
-                <p class="text-red-700 mb-4">${error.message}</p>
-                <button onclick="location.reload()"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 mt-2">Recarregar</button>
-            </div>
-        `;
-        console.error('Failed to initialize application:', error);
-    }
-};
 
 const setupAccessibilityControls = () => {
     // Toggle so
@@ -89,7 +34,59 @@ const setupAccessibilityControls = () => {
         vibrationToggle.textContent = getVibrationState() ? '📳 Vibració' : '🚫 Vibració';
 };
 
-// Inicialitza el joc
+const init = async () => {
+    try {
+        // Inicialitza Firebase i autentica
+        firebaseComponents = await initFirebase();
+        if (!firebaseComponents) throw new Error('No s\'ha pogut inicialitzar Firebase.');
+        const { app, db, auth } = firebaseComponents;
+        const userId = await authenticateUser(auth);
+        if (!userId) throw new Error('No s\'ha pogut autenticar l\'usuari.');
+
+        // Inicialitzacions locals UI i audio
+        initAudio();
+        initUI();
+
+        // Definim totes les funcions globals abans de cap render al DOM
+        window.gameFunctions = {
+            ...gameFunctions,
+            renderLobby,
+            renderGame,
+        };
+
+        // Només ara podem renderitzar segur el lobby!
+        renderLobby('Benvingut! Crea o uneix-te a una partida.');
+
+        // Inicia la lògica del joc
+        initGameLogic(db, app.options.projectId, userId);
+
+        // Controls d'accessibilitat
+        setupAccessibilityControls();
+
+        // Helpers de debug
+        window.debugRacko = {
+            getUserId: () => userId,
+            getFirebaseApp: () => app,
+            showConfig: () => {
+                console.log('Config:', app.options);
+                console.log('UserId:', userId);
+            }
+        };
+    } catch (error) {
+        // Error elegant d'inicialització
+        document.getElementById('main-container').innerHTML = `
+            <div class="p-8 bg-red-100 rounded-xl text-center">
+                <h2 class="text-xl font-bold text-red-600 mb-4">Error d'Inicialització</h2>
+                <p class="text-red-700 mb-4">${error.message}</p>
+                <button onclick="location.reload()"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 mt-2">Recarregar</button>
+            </div>
+        `;
+        console.error('Failed to initialize application:', error);
+    }
+};
+
+// Inicialitzem el joc
 init();
 
 window.addEventListener('error', (event) => {
@@ -110,4 +107,3 @@ window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     event.preventDefault();
 });
-
