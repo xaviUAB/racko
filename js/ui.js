@@ -75,14 +75,25 @@ export const renderLobby = (message = '') => {
         </div>
     `;
     document.getElementById('game-id-value').textContent = codi;
+    
     const joinBtn = document.getElementById('join-button');
     if (joinBtn) {
-        joinBtn.onclick = () => {
-            const code = document.getElementById('join-game-input').value;
-            const name = document.getElementById('player-name-input').value;
-            window.gameFunctions.joinGame(code, name);
+    joinBtn.onclick = () => {
+            if (typeof window.gameFunctions?.joinGame === 'function') {
+                const code = document.getElementById('join-game-input').value;
+                const name = document.getElementById('player-name-input').value;
+                window.gameFunctions.joinGame(code, name);
+            } else {
+                alert('Error intern: la funció unió no està disponible (recarrega la pàgina o actualitza el codi de game-logic.js)');
+                console.error('window.gameFunctions:', window.gameFunctions);
+            }
         };
     }
+    
+    
+    
+    
+
     document.getElementById('game-active-area').classList.add('hidden');
     document.getElementById('custom-modal').classList.add('hidden');
     lucide.createIcons();
