@@ -211,11 +211,128 @@ const resetLobbyState = (msg = '') => {
     }
 };
 
+
+const handleDrawCard = async (source) => {
+    // source: "draw" o "discard"
+    if (!gameState || gameState.status !== 'playing') return;
+    if (gameState.turn !== userId) return;
+    if (window.heldCard) return; // Ja tens carta agafada
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameRef = getGameRef(gameId);
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) throw new Error("Partida no trobada");
+            const game = gameDoc.data();
+
+            let newHeldCard, newDeck = [...game.deck], newDiscardPile = [...game.discardPile];
+
+            if (source === "draw") {
+                if (newDeck.length === 0) throw new Error("El munt està buit");
+                newHeldCard = newDeck.pop();
+            } else if (source === "discard") {
+                if (newDiscardPile.length === 0) throw new Error("No hi ha cartes a la pila de descarts");
+                newHeldCard = newDiscardPile.pop();
+            } else {
+                throw new Error("Font incorrecta");
+            }
+
+            transaction.update(gameRef, {
+                deck: newDeck,
+                discardPile: newDiscardPile,
+                heldCard: newHeldCard,
+                heldCardSource: source,
+                lastUpdate: Date.now()
+            });
+        });
+    } catch (error) {
+        showModal("Error en robar carta", error.message);
+    }
+};
+
+const handleReplaceCard = async (slotIndex) => {
+    // slotIndex: 0..9. Només si tens carta agafada des del draw o discard!
+    if (!gameState || gameState.status !== 'playing') return;
+    if (gameState.turn !== userId) return;
+    const myPlayerIdx = gameState.players.findIndex(p => p.id === userId);
+    if (myPlayerIdx < 0) return;
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameRef = getGameRef(gameId);
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) throw new Error("Partida no trobada");
+            const game = gameDoc.data();
+
+            if (!game.heldCard) throw new Error("No tens carta agafada");
+            // Reemplaça la carta al slot pel heldCard actual
+            const updatedRack = [...game.players[myPlayerIdx].rack];
+            const replacedCard = updatedRack[slotIndex];
+            updatedRack[slotIndex] = game.heldCard;
+
+            // Actualitza rack del jugador
+            const updatedPlayers = [...game.players];
+            updatedPlayers[myPlayerIdx] = {
+                ...game.players[myPlayerIdx],
+                rack: updatedRack
+            };
+
+            let newDiscardPile = [...game.discardPile];
+
+            // Si la carta agafada era del discard, NO torna la carta reemplaçada al discard
+            // Si la carta agafada era del draw, la carta reemplaçada VA al discard
+            if (game.heldCardSource === 'draw' && replacedCard !== null) {
+                newDiscardPile.push(replacedCard);
+            }
+
+            transaction.update(gameRef, {
+                players: updatedPlayers,
+                discardPile: newDiscardPile,
+                heldCard: null,
+                heldCardSource: null,
+                lastUpdate: Date.now()
+            });
+        });
+    } catch (error) {
+        showModal("Error en reemplaçar carta", error.message);
+    }
+};
+
+const handleDiscardHeldCard = async () => {
+    if (!gameState || gameState.status !== 'playing') return;
+    if (gameState.turn !== userId) return;
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameRef = getGameRef(gameId);
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) throw new Error("Partida no trobada");
+            const game = gameDoc.data();
+
+            if (!game.heldCard) throw new Error("No tens carta agafada");
+            if (game.heldCardSource !== "draw") throw new Error("Només es pot descartar la carta del munt");
+
+            let newDiscardPile = [...game.discardPile, game.heldCard];
+
+            transaction.update(gameRef, {
+                discardPile: newDiscardPile,
+                heldCard: null,
+                heldCardSource: null,
+                lastUpdate: Date.now()
+            });
+        });
+    } catch (error) {
+        showModal("Error al descartar carta", error.message);
+    }
+};
+
 export const gameFunctions = {
     createGame,
     joinGame,
     startGame,
     resetLobbyState,
+    handleDrawCard,
+    handleReplaceCard,
+    handleDiscardHeldCard,
     // Altres funcions si cal
     renderLobby: () => {},
     renderGame: () => {}
