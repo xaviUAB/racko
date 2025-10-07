@@ -70,6 +70,17 @@ export const renderLobby = (message = '') => {
                         ${n} Jugadors<br><small>(Cartes 1-${n === 2 ? 40 : n === 3 ? 50 : 60})</small>
                     </button>
                 `).join('')}
+            
+            const joinBtn = document.getElementById('join-button');
+            if (joinBtn) {
+                joinBtn.onclick = () => {
+                    const code = document.getElementById('join-game-input').value;
+                    const name = document.getElementById('player-name-input').value;
+                    window.gameFunctions.joinGame(code, name);
+                };
+            }
+
+            
             </div>
 
             ${message ? `<p class="mt-4 text-sm text-red-600 font-semibold">${message}</p>` : ''}
