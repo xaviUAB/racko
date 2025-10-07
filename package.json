@@ -1,0 +1,36 @@
+{
+  "name": "rack-o-multiplayer",
+  "version": "2.0.0",
+  "description": "Rack-O multiplayer card game with Firebase backend",
+  "type": "module",
+  "main": "js/app.js",
+  "scripts": {
+    "dev": "npx live-server --port=3000 --entry-file=index.html",
+    "build": "npx rollup -c rollup.config.js",
+    "deploy": "firebase deploy --only hosting",
+    "test": "npx vitest",
+    "lint": "npx eslint js/**/*.js",
+    "serve": "python3 -m http.server 8000"
+  },
+  "keywords": ["game", "multiplayer", "firebase", "card-game", "rack-o"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "rollup": "^4.9.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "vitest": "^1.0.0",
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "sideEffects": [
+    "./js/sound.js"
+  ],
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

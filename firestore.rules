@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for common checks
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isPlayer(gameData) {
+      return request.auth.uid in gameData.playerIds;
+    }
+    
+    function isRateLimited(gameData) {
+      return request.time - resource.data.lastUpdate > duration.value(1, 's');
+    }
+    
+    function isValidPlayerCount(gameData) {
+      return gameData.playerIds.size() >= 2 && gameData.playerIds.size() <= 4;
+    }
+
+    // Rack-O game rules
+    match /artifacts/{appId}/public/data/rackogames/{gameId} {
+      // Read access: any authenticated user can read any game
+      allow read: if isAuthenticated();
+      
+      // Create access: authenticated users can create games with themselves as the only player
+      allow create: if isAuthenticated()
+                    && request.resource.data.playerIds.hasOnly([request.auth.uid])
+                    && request.resource.data.status == 'lobby'
+                    && isValidPlayerCount(request.resource.data);
+      
+      // Update access: only players in the game can update, with rate limiting
+      allow update: if isAuthenticated()
+                    && isPlayer(resource.data)
+                    && isRateLimited(resource.data)
+                    && isValidPlayerCount(request.resource.data);
+      
+      // Delete access: only players in the game can delete
+      allow delete: if isAuthenticated()
+                    && isPlayer(resource.data);
+    }
+    
+    // Rate limiting collection for Cloud Functions
+    match /rate_limits/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}
