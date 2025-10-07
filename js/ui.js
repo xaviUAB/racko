@@ -109,7 +109,43 @@ export const renderGame = (game, userId, isMyTurn, getMyPlayer, getNextPlayerId)
     lucide.createIcons();
 };
 
-// La resta de helpers originals (updateGameStatus, renderDrawPileAndDiscard, renderActionArea, renderRack, renderPlayerScores).
-// ... no s'han de modificar si ja et funcionaven/eren correctes.
-
 export { heldCard, heldSource };
+
+function renderLobbyContent(game, userId) {
+    const myPlayer = game.players.find(p => p.id === userId);
+    const creator = game.players[0];
+    const isCreator = myPlayer ? myPlayer.id === creator.id : false;
+    const isLobbyFull = game.players.length === game.numPlayers;
+    const playerListHtml = game.players.map(p => `
+        <span class="font-semibold ${p.id === userId ? 'text-indigo-600' : 'text-gray-800'}">
+            ${p.name}${p.id === creator.id ? ' (Creador)' : ''}
+        </span>
+    `).join(', ');
+    return `
+        <div class="p-6 bg-white rounded-xl shadow-lg w-full max-w-lg mx-auto border-t-4 border-blue-500">
+            <p class="text-xl font-bold mb-4 text-blue-700">Esperant a la Sala d'Espera</p>
+            <p class="text-lg font-bold text-gray-800 mb-2">
+                Codi de Partida (4 Dígits per Compartir): 
+                <span class="text-3xl font-extrabold select-all text-red-600 bg-red-100 p-1 rounded">${game.gameId || 'N/A'}</span>
+            </p>
+            <p class="text-sm text-gray-700">Jugadors connectats: ${game.players.length} de ${game.numPlayers}.</p>
+            <p class="text-sm text-gray-700 mt-2">Jugadors: ${playerListHtml}</p>
+            ${isLobbyFull ? 
+                `<p class="text-sm text-green-700 mt-2 font-bold">Lobby complet (${game.players.length}/${game.numPlayers}).</p>` : 
+                `<p class="text-sm text-gray-700 mt-2">Esperant ${game.numPlayers - game.players.length} jugadors més per unir-se...</p>`
+            }
+            ${isCreator ? 
+                (isLobbyFull ?
+                    `<button onclick="window.gameFunctions.startGame()" 
+                             class="w-full py-3 mt-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 flex items-center justify-center">
+                        <i data-lucide="play" class="mr-2"></i>
+                        Iniciar Partida
+                    </button>` :
+                    `<p class="mt-4 text-center text-red-600 font-semibold">Esperant que tots els jugadors (${game.numPlayers}) s'uneixin per iniciar la partida.</p>`
+                ) :
+                `<p class="mt-4 text-center text-gray-600">Esperant que el creador de la partida (${creator.name}) l'iniciï quan estigui completa.</p>`
+            }
+        </div>
+    `;
+}
+
