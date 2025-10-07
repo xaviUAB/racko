@@ -100,6 +100,7 @@ export const renderLobby = (message = '') => {
 };
 
 export const renderGame = (game, userId, isMyTurn, getMyPlayer, getNextPlayerId) => {
+    console.log("STATE", game);
     const container = document.getElementById('game-container');
     if (game.status === 'lobby') {
         document.getElementById('game-active-area').classList.add('hidden');
