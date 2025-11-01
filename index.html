@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rack-O Game: Multijugador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #fdfaf3; /* Un to de fons una mica més càlid */
+            overflow-x: hidden;
+        }
+        .card-slot {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            user-select: none;
+        }
+        .card-value {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            border: 2px solid #374151;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 2px rgba(255,255,255,0.5);
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .card-back {
+            background-color: #4f46e5;
+            border: 3px solid #fcd34d;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        #floating-card {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            width: 70px; /* Mida una mica més gran per a la visibilitat */
+            height: 90px;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.1s ease-in-out;
+        }
+        #floating-card.visible {
+            opacity: 1;
+        }
+        #floating-card .card-value {
+             font-size: 1.75rem;
+             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.552.0"
+  }
+}
+</script>
+</head>
+<body class="p-4 sm:p-6">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
