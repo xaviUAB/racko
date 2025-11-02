@@ -1,5 +1,4 @@
 {
   "name": "Rack-O Multiplayer",
-  "description": "A multiplayer version of the classic card game Rack-O, built with React and Firebase. Players aim to arrange 10 cards in their rack from lowest to highest. This version features real-time gameplay, scoring, and a lobby system.",
-  "requestFramePermissions": []
+  "description": "A multiplayer version of the classic card game Rack-O, built with React and Firebase. Players aim to arrange 10 cards in their rack from lowest to highest. This version features real-time gameplay, scoring, and a lobby system."
 }
