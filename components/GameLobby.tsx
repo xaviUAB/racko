@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState } from '../types';
+import { GameState, Card } from '../types';
 import { Play } from 'lucide-react';
 import { doc, runTransaction, arrayUnion } from 'firebase/firestore';
 import { db, appId } from '../services/firebase';
@@ -34,15 +34,20 @@ const GameLobby: React.FC<GameLobbyProps> = ({ gameState, gameId, isHost }) => {
                 let fullDeck = createAndShuffleDeck(game.maxCardValue);
                 const players = [...game.players];
 
-                // Reparteix les cartes inicials a cada jugador
-                for (let i = 0; i < players.length; i++) {
-                     const newRack = [];
-                     for(let j=0; j < NUM_CARDS_IN_RACK; j++){
-                        if(fullDeck.length > 0) {
-                            newRack.push(fullDeck.pop()!);
+                // --- LÒGICA DE REPARTIMENT DE CARTES CORREGIDA ---
+                // Reparteix una carta a cada jugador per torn, 10 vegades, per a un repartiment just.
+                const newRacks: Card[][] = Array.from({ length: players.length }, () => []);
+                for (let i = 0; i < NUM_CARDS_IN_RACK; i++) {
+                    for (let j = 0; j < players.length; j++) {
+                        if (fullDeck.length > 0) {
+                            newRacks[j].push(fullDeck.pop()!);
                         }
-                     }
-                     players[i].rack = newRack.sort((a,b) => a-b); // Les cartes es col·loquen ordenades al principi per error, el joc consisteix en ordenar-les. Aquesta línia hauria de ser eliminada, però la mantinc per replicar la lògica original si fos intencionat. Per un joc correcte, s'hauria de treure el .sort()
+                    }
+                }
+                
+                // Assigna els faristols (racks) amb cartes aleatòries i NO ordenades.
+                for (let i = 0; i < players.length; i++) {
+                    players[i].rack = newRacks[i];
                 }
 
                 const firstDiscard = fullDeck.pop();

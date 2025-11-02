@@ -1,24 +1,39 @@
-
 import React, { useState, useEffect } from 'react';
-// FIX: Use Firebase v8 compat imports for auth, as the environment seems to be using an older version which lacks the expected v9 exports.
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import { auth } from './services/firebase';
+import { auth, isPlatformEnvironment } from './services/firebase';
+import { onAuthStateChanged, signInAnonymously, signInWithCustomToken, User } from 'firebase/auth';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
 import { Loader2 } from 'lucide-react';
 
+// Aquesta variable global és proporcionada per l'entorn de la plataforma.
+declare var __initial_auth_token: string | undefined;
+
 const App: React.FC = () => {
-    // FIX: Use firebase.User type from the compat import.
-    const [user, setUser] = useState<firebase.User | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [gameId, setGameId] = useState<string | null>(null);
 
     useEffect(() => {
-        // FIX: Use auth.onAuthStateChanged (v8/compat syntax) instead of the modular onAuthStateChanged(auth, ...) (v9 syntax).
-        const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-            setUser(currentUser);
-            setLoading(false);
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                // Si ja hi ha un usuari, actualitzem l'estat i deixem de carregar.
+                setUser(currentUser);
+                setLoading(false);
+            } else {
+                // Si no hi ha usuari, intentem iniciar sessió.
+                try {
+                    if (isPlatformEnvironment && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    // Després de l'intent d'inici de sessió, onAuthStateChanged es tornarà a executar
+                    // amb el nou usuari, i actualitzarà l'estat en aquell moment.
+                } catch (error) {
+                    console.error("Error durant l'inici de sessió inicial:", error);
+                    setLoading(false); // Aturem la càrrega per evitar un bucle infinit en cas d'error.
+                }
+            }
         });
         return () => unsubscribe();
     }, []);
